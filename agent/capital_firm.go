@@ -1,28 +1,49 @@
-package handlers
+package agent
 
 import (
 	"math"
 
-	agentModels "github.com/ninjadotorg/SimEconBaseline1/agent/models"
 	"github.com/ninjadotorg/SimEconBaseline1/common"
 	"github.com/ninjadotorg/SimEconBaseline1/economy"
 	"github.com/ninjadotorg/SimEconBaseline1/good"
-	marketModels "github.com/ninjadotorg/SimEconBaseline1/market/models"
+	market "github.com/ninjadotorg/SimEconBaseline1/market"
 )
+
+type CapitalFirm struct {
+	/**
+	 * technology coefficient in the production function
+	 */
+	TechCoefficient float64
+
+	/**
+	 * sensitivity of output to labor (power on L in the production function
+	 */
+	Beta float64
+
+	/**
+	 * capital price (fixed for now)
+	 */
+	Price float64
+
+	/**
+	 * Firm prop for general props between firm types
+	 */
+	Firm *Firm
+}
 
 func NewCapitalFirm(
 	initWalletBal float64,
 	initWageBudget float64,
-) *agentModels.CapitalFirm {
+) *CapitalFirm {
 	firm := NewFirm(initWalletBal)
 	firm.WageBudget = initWageBudget
 
 	econ := economy.GetEconInstance()
 	walletAcc := econ.TransactionManager.WalletAccounts[firm.ID]
-	LMkt := econ.GetMarket("Labor").(*marketModels.LaborMarket)
+	LMkt := econ.GetMarket("Labor").(*market.LaborMarket)
 	LMkt.AddEmployer(firm.ID, walletAcc.Address, firm.Labor, firm.WageBudget)
 
-	return &agentModels.CapitalFirm{
+	return &CapitalFirm{
 		TechCoefficient: 20000, // we assume infinite capacity here so we give TechCoefficient a very large value.
 		Firm:            firm,
 		Beta:            0.5,
@@ -30,7 +51,7 @@ func NewCapitalFirm(
 	}
 }
 
-func (capitalFirm *agentModels.CapitalFirm) Act() {
+func (capitalFirm *CapitalFirm) Act() {
 	// Capital firms are not supposed to have loans in this
 	// phase. But if for some reason a firm has a positive
 	// loan, pay back that loan.
@@ -54,10 +75,10 @@ func (capitalFirm *agentModels.CapitalFirm) Act() {
 	firm.WageBudget = revenue // - loan
 
 	// post to markets
-	LMkt := econ.GetMarket("Labor").(*marketModels.LaborMarket)
+	LMkt := econ.GetMarket("Labor").(*market.LaborMarket)
 	LMkt.AddEmployer(firm.ID, walletAcc.Address, firm.Labor, firm.WageBudget)
 
-	CMkt := econ.GetMarket("Capital").(*marketModels.CapitalMarket)
+	CMkt := econ.GetMarket("Capital").(*market.CapitalMarket)
 	CMkt.AddCapitalSellOffer(
 		capitalFirm,
 		capitalFirm.Price,
@@ -68,11 +89,11 @@ func (capitalFirm *agentModels.CapitalFirm) Act() {
 	labor.Decrease(laborQty)
 }
 
-func (capitalFirm *agentModels.CapitalFirm) ConvertToProduct(laborQty float64) float64 {
+func (capitalFirm *CapitalFirm) ConvertToProduct(laborQty float64) float64 {
 	return capitalFirm.TechCoefficient * math.Pow(laborQty, capitalFirm.Beta)
 }
 
-func (capitalFirm *agentModels.CapitalFirm) GetGood(goodName string) good.Good {
+func (capitalFirm *CapitalFirm) GetGood(goodName string) good.Good {
 	if goodName == "Labor" {
 		return capitalFirm.Firm.Labor
 	}

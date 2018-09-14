@@ -1,7 +1,9 @@
-package models
+package agent
 
 import (
+	"github.com/ninjadotorg/SimEconBaseline1/economy"
 	"github.com/ninjadotorg/SimEconBaseline1/good"
+	"github.com/ninjadotorg/SimEconBaseline1/util"
 )
 
 type Firm struct {
@@ -64,4 +66,20 @@ type Firm struct {
 	 *  total cost in the last step
 	 */
 	TotalCost float64
+}
+
+func NewFirm(initWalletBal float64) *Firm {
+	firmID := util.NewUUID()
+	econ := economy.GetEconInstance()
+	econ.TransactionManager.OpenWalletAccount(
+		firmID,
+		initWalletBal,
+	)
+
+	return &Firm{
+		ID: firmID,
+		Labor: &good.Labor{
+			Quantity: 0,
+		},
+	}
 }

@@ -1,25 +1,97 @@
-package handlers
+package agent
 
 import (
 	"math"
 
-	agentModels "github.com/ninjadotorg/SimEconBaseline1/agent/models"
 	"github.com/ninjadotorg/SimEconBaseline1/common"
 	"github.com/ninjadotorg/SimEconBaseline1/economy"
 	"github.com/ninjadotorg/SimEconBaseline1/good"
-	marketModels "github.com/ninjadotorg/SimEconBaseline1/market/models"
+	market "github.com/ninjadotorg/SimEconBaseline1/market"
 	"github.com/ninjadotorg/SimEconBaseline1/transaction_manager"
 )
 
-func NewAverager(size int) *agentModels.Averager {
-	return &agentModels.Averager{
+type ConsumedGoodsFirm struct {
+	/**
+	 * product name: Necessity or Enjoyment
+	 */
+	ProductName string
+
+	/**
+	 * technology coefficient in the production function
+	 */
+	TechCoefficient float64
+
+	/**
+	 * sensitivity of output to labor (power on L in the production function
+	 */
+	Beta float64
+
+	/**
+	 * sensitivity of output to marginal profit
+	 */
+	Phi float64
+
+	/**
+	 * sensitivity of wage to money flow gap
+	 */
+	Lambda float64
+
+	/**
+	 * minimal capacity utilization to allow capital expansion
+	 */
+	EUtilThreshold float64
+
+	/**
+	 * minimal capacity utilization to allow capital replacement
+	 */
+	RUtilThreshold float64
+
+	/**
+	 * product the firm is producing/selling (enjoyment or necessity)
+	 */
+	Product good.Good
+
+	/**
+	 * capital owned by the firm
+	 */
+	Capital *good.Capital
+
+	/**
+	 * quantity of capital
+	 */
+	CapitalQty float64
+
+	/**
+	 * present value of capital
+	 */
+	CapitalVal float64
+
+	/**
+	 * used to calculate average profit
+	 */
+	// TODO: private Averager pfAvger;
+
+	/**
+	 * Firm prop for general props between firm types
+	 */
+	Firm *Firm
+}
+
+type Averager struct {
+	Sum  float64 // sum of data
+	Size int     // buffer size
+	Data []float64
+}
+
+func NewAverager(size int) *Averager {
+	return &Averager{
 		Data: []float64{},
 		Size: size,
 		Sum:  0,
 	}
 }
 
-func (averager *agentModels.Averager) Update(val float64) float64 {
+func (averager *Averager) Update(val float64) float64 {
 	averager.Data = append(averager.Data, val)
 	averager.Sum += val
 	if len(averager.Data) > averager.Size {
@@ -34,8 +106,8 @@ func NewConsumedGoodsFirm(
 	initOutput float64,
 	initWageBudget float64,
 	initCapital int,
-	capitalProducers []*agentModels.CapitalFirm,
-) *agentModels.ConsumedGoodsFirm {
+	capitalProducers []*CapitalFirm,
+) *ConsumedGoodsFirm {
 	firm := NewFirm(initWalletBal)
 	producerIDs := []string{}
 	for _, cp := range capitalProducers {
@@ -53,17 +125,17 @@ func NewConsumedGoodsFirm(
 	// gets employees before the first round begins
 	econ := economy.GetEconInstance()
 	walletAcc := econ.TransactionManager.WalletAccounts[firm.ID]
-	LMkt := econ.GetMarket("Labor").(*marketModels.LaborMarket)
+	LMkt := econ.GetMarket("Labor").(*market.LaborMarket)
 	LMkt.AddEmployer(firm.ID, walletAcc.Address, firm.Labor, firm.WageBudget)
 
-	return &agentModels.ConsumedGoodsFirm{
+	return &ConsumedGoodsFirm{
 		Firm:        firm,
 		Capital:     capital,
 		ProductName: productName,
 	}
 }
 
-func (cgf *agentModels.ConsumedGoodsFirm) UseCapital() float64 {
+func (cgf *ConsumedGoodsFirm) UseCapital() float64 {
 	econ := economy.GetEconInstance()
 	var cost float64 = 0
 	capital := cgf.Capital
@@ -106,11 +178,11 @@ func (cgf *agentModels.ConsumedGoodsFirm) UseCapital() float64 {
  * @return output produced by labor amount of labor and c
  *         amount of capital
  */
-func (cgf *agentModels.ConsumedGoodsFirm) ConvertToProduct(labor, c float64) float64 {
+func (cgf *ConsumedGoodsFirm) ConvertToProduct(labor, c float64) float64 {
 	return cgf.TechCoefficient * math.Pow(labor, cgf.Beta) * math.Pow(c, 1-cgf.Beta)
 }
 
-func (cgf *agentModels.ConsumedGoodsFirm) Act() {
+func (cgf *ConsumedGoodsFirm) Act() {
 	var newOutput, newWageBudget, pPrice float64
 	firm := cgf.Firm
 	laborQty := firm.Labor.Quantity
@@ -119,8 +191,8 @@ func (cgf *agentModels.ConsumedGoodsFirm) Act() {
 	// get firm finance information
 	econ := economy.GetEconInstance()
 	walletAcc := econ.TransactionManager.WalletAccounts[firm.ID]
-	pMkt := econ.GetMarket(cgf.ProductName).(*marketModels.ConsumedGoodsMarket)
-	lMkt := econ.GetMarket("Labor").(*marketModels.ConsumedGoodsMarket)
+	pMkt := econ.GetMarket(cgf.ProductName).(*market.ConsumedGoodsMarket)
+	lMkt := econ.GetMarket("Labor").(*market.ConsumedGoodsMarket)
 
 	firm.Revenue = walletAcc.PriIC
 	firm.Loan = 0                                       // TODO: because Bank has not existed yet
@@ -181,13 +253,13 @@ func (cgf *agentModels.ConsumedGoodsFirm) Act() {
 }
 
 func buyCapital(
-	cgf *agentModels.ConsumedGoodsFirm,
+	cgf *ConsumedGoodsFirm,
 	econ *economy.Economy,
 	newOutput float64,
 	newWageBudget float64,
 	walletAcc *transaction_manager.WalletAccount,
 ) {
-	cMkt := econ.GetMarket("Capital").(*marketModels.ConsumedGoodsMarket)
+	cMkt := econ.GetMarket("Capital").(*market.ConsumedGoodsMarket)
 	firm := cgf.Firm
 	laborQty := firm.Labor.Quantity
 	capitalQty := cgf.Capital.Quantity

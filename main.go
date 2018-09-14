@@ -3,11 +3,9 @@ package main
 import (
 	"fmt"
 
-	agentHandlers "github.com/ninjadotorg/SimEconBaseline1/agent/handlers"
-	agentModels "github.com/ninjadotorg/SimEconBaseline1/agent/models"
+	agent "github.com/ninjadotorg/SimEconBaseline1/agent"
 	"github.com/ninjadotorg/SimEconBaseline1/economy"
-	marketHandlers "github.com/ninjadotorg/SimEconBaseline1/market/handlers"
-	marketModels "github.com/ninjadotorg/SimEconBaseline1/market/models"
+	market "github.com/ninjadotorg/SimEconBaseline1/market"
 )
 
 const (
@@ -53,39 +51,39 @@ func main() {
 	econ := economy.GetEconInstance()
 
 	// Create and add markets
-	eMkt := marketHandlers.NewConsumedGoodsMarket(
+	eMkt := market.NewConsumedGoodsMarket(
 		"Enjoyment",
 		MIN_INIT_E_PRICE,
 		MAX_INIT_E_PRICE,
 	)
 
-	nMkt := marketHandlers.NewConsumedGoodsMarket(
+	nMkt := market.NewConsumedGoodsMarket(
 		"Necessity",
 		MIN_INIT_N_PRICE,
 		MAX_INIT_N_PRICE,
 	)
 
-	lMkt := marketHandlers.NewLaborMarket()
-	cMkt := marketHandlers.NewCapitalMarket()
+	lMkt := market.NewLaborMarket()
+	cMkt := market.NewCapitalMarket()
 
 	// add markets to economy
 	econ.Markets["Labor"] = lMkt
 	econ.Markets["Capital"] = cMkt
 	econ.Markets["Enjoyment"] = eMkt
 	econ.Markets["Necessity"] = nMkt
-	econ.ConsumedGoodsMarkets = []*marketModels.ConsumedGoodsMarket{eMkt, nMkt}
+	econ.ConsumedGoodsMarkets = []*market.ConsumedGoodsMarket{eMkt, nMkt}
 
 	// Create and add firms
-	cFirm := agentHandlers.NewCapitalFirm(
+	cFirm := agent.NewCapitalFirm(
 		CFIRM_INIT_CHECKING,
 		CFIRM_INIT_WAGEBUDGET,
 	)
-	cFirms := []*agentModels.CapitalFirm{cFirm}
+	cFirms := []*agent.CapitalFirm{cFirm}
 
-	eFirms := []*agentModels.EnjoymentFirm{}
-	nFirms := []*agentModels.NecessityFirm{}
+	eFirms := []*agent.EnjoymentFirm{}
+	nFirms := []*agent.NecessityFirm{}
 	for i := 0; i < NUM_EFIRMS; i++ {
-		eFirm := agentHandlers.NewEnjoymentFirm(
+		eFirm := agent.NewEnjoymentFirm(
 			EFIRM_INIT_CHECKING,
 			EFIRM_INIT_OUTPUT,
 			EFIRM_INIT_WAGEBUDGET,
@@ -95,7 +93,7 @@ func main() {
 		eFirms = append(eFirms, eFirm)
 	}
 	for i := 0; i < NUM_NFIRMS; i++ {
-		nFirm := agentHandlers.NewEnjoymentFirm(
+		nFirm := agent.NewEnjoymentFirm(
 			NFIRM_INIT_CHECKING,
 			NFIRM_INIT_OUTPUT,
 			NFIRM_INIT_WAGEBUDGET,
@@ -113,7 +111,7 @@ func main() {
 	// Create and add laborers
 	for i := 0; i < NUM_LABORERS; i++ {
 		var initN float64 = 15
-		laborer := agentHandlers.NewLaborer(
+		laborer := agent.NewLaborer(
 			LABORER_INIT_E,
 			initN,
 			LABORER_INIT_CHECKING,

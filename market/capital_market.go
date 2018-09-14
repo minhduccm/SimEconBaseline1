@@ -1,15 +1,49 @@
-package handlers
+package market
 
 import (
 	"math/rand"
 
+	"github.com/ninjadotorg/SimEconBaseline1/agent"
 	"github.com/ninjadotorg/SimEconBaseline1/common"
 	"github.com/ninjadotorg/SimEconBaseline1/good"
-	marketModels "github.com/ninjadotorg/SimEconBaseline1/market/models"
 )
 
-func NewCapitalMarket() *marketModels.CapitalMarket {
-	return &marketModels.CapitalMarket{
+type CapitalMarket struct {
+	// buy offers
+	CapitalBuyOffers []*CapitalBuyOffer
+
+	// sell offers
+	CapitalSellOffers []*CapitalSellOffer
+
+	// volume of capital good traded
+	MktGoodVol float64
+
+	// totalMetric supply of capital good
+	Supply float64
+
+	// sum of reciprocal of prices of all sell offers
+	TotalMetric float64
+
+	// sum of prices of all sell offers
+	TotalPrice float64
+
+	// average capital price
+	AvgPrice float64
+}
+
+type CapitalBuyOffer struct {
+	Capital  *good.Capital
+	Quantity int
+}
+
+type CapitalSellOffer struct {
+	Seller   *agent.CapitalFirm
+	Price    float64
+	Capacity int
+}
+
+func NewCapitalMarket() *CapitalMarket {
+	return &CapitalMarket{
 		CapitalBuyOffers:  []*CapitalBuyOffer{},
 		CapitalSellOffers: []*CapitalSellOffer{},
 		Supply:            0,
@@ -18,23 +52,23 @@ func NewCapitalMarket() *marketModels.CapitalMarket {
 	}
 }
 
-func (cm *marketModels.CapitalMarket) AddCapitalBuyOffer(
+func (cm *CapitalMarket) AddCapitalBuyOffer(
 	capital *good.Capital,
 	qty int,
 ) {
-	offer := &marketModels.CapitalBuyOffer{
+	offer := &CapitalBuyOffer{
 		Capital:  capital,
 		Quantity: qty,
 	}
 	cm.CapitalBuyOffers = append(cm.CapitalBuyOffers, offer)
 }
 
-func (cm *marketModels.CapitalMarket) AddCapitalSellOffer(
-	seller *agentModels.CapitalFirm,
+func (cm *CapitalMarket) AddCapitalSellOffer(
+	seller *agent.CapitalFirm,
 	price float64,
 	capacity int,
 ) {
-	offer := &marketModels.CapitalSellOffer{
+	offer := &CapitalSellOffer{
 		Seller:   seller,
 		Price:    price,
 		Capacity: capacity,
@@ -45,7 +79,7 @@ func (cm *marketModels.CapitalMarket) AddCapitalSellOffer(
 	cm.Supply += capacity
 }
 
-func (cm *marketModels.CapitalMarket) Perform() {
+func (cm *CapitalMarket) Perform() {
 	cm.MktGoodVol = 0
 	// TODO: should shuffle BuyOffers
 
@@ -53,7 +87,7 @@ func (cm *marketModels.CapitalMarket) Perform() {
 		if cm.Supply == 0 {
 			return
 		}
-		var picked *marketModels.CapitalSellOffer = nil
+		var picked *CapitalSellOffer = nil
 		var removingIdx int = -1
 		for {
 			if picked != nil {
@@ -83,6 +117,6 @@ func (cm *marketModels.CapitalMarket) Perform() {
 	cm.AvgPrice = cm.TotalPrice / cm.Supply
 	cm.TotalPrice = 0
 	cm.Supply = 0
-	cm.CapitalBuyOffers = []*marketModels.CapitalBuyOffer{}
-	cm.CapitalSellOffers = []*marketModels.CapitalSellOffer{}
+	cm.CapitalBuyOffers = []*CapitalBuyOffer{}
+	cm.CapitalSellOffers = []*CapitalSellOffer{}
 }

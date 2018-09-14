@@ -1,13 +1,12 @@
-package handlers
+package agent
 
 import (
 	"fmt"
 	"math"
 
-	agentModels "github.com/ninjadotorg/SimEconBaseline1/agent/models"
 	"github.com/ninjadotorg/SimEconBaseline1/economy"
 	"github.com/ninjadotorg/SimEconBaseline1/good"
-	marketModels "github.com/ninjadotorg/SimEconBaseline1/market/models"
+	market "github.com/ninjadotorg/SimEconBaseline1/market"
 	"github.com/ninjadotorg/SimEconBaseline1/util"
 )
 
@@ -28,14 +27,74 @@ const (
 	upsilon = 0.04
 )
 
+type DemandForEnjoyment struct{}
+type DemandForNecessity struct{}
+
+type Laborer struct {
+	// enjoyment market
+	// EMkt *market.ConsumedGoodsMarket
+
+	// // necessity market
+	// NMkt *market.ConsumedGoodsMarket
+
+	// // labor market
+	// LMkt *market.LaborMarket
+
+	// enjoyment good
+	Enjoyment *good.Enjoyment
+
+	// necessity good
+	Necessity *good.Necessity
+
+	// savings rate (portion of total income+savings that is saved in the last
+	// step)
+	SavingsRate float64
+
+	// consumption (in coin)
+	Consumption float64
+
+	// consumption of enjoyment (in coin)
+	EConsumption float64
+
+	// consumption of necessity (in coin)
+	NConsumption float64
+
+	// minimum necessity (in real quantity) to buy in the current step
+	MinN float64
+
+	// lowest real interest rate seen
+	LowRR float64
+
+	// highest real interest rate seen
+	HighRR float64
+
+	// demand for enjoyment
+	DemandForE *DemandForEnjoyment
+
+	// demand for necessity
+	DemandForN *DemandForNecessity
+
+	// total income
+	Income float64
+
+	// wage from employment
+	Wage float64
+
+	// each agent has an unique ID that is also used as the bank account number
+	ID string
+
+	// agent status
+	IsAlive bool
+}
+
 func NewLaborer(
 	initEQty float64,
 	initNQty float64,
 	initBalance float64,
 	initSavingsRate float64,
-) *agentModels.Laborer {
+) *Laborer {
 	econ := economy.GetEconInstance()
-	laborer := &agentModels.Laborer{
+	laborer := &Laborer{
 		ID:          util.NewUUID(),
 		IsAlive:     true,
 		Enjoyment:   &good.Enjoyment{Quantity: initEQty},
@@ -51,18 +110,18 @@ func NewLaborer(
 	)
 
 	walletAcc := econ.TransactionManager.WalletAccounts[laborer.ID]
-	LMkt := econ.GetMarket("Labor").(*marketModels.LaborMarket)
+	LMkt := econ.GetMarket("Labor").(*market.LaborMarket)
 	LMkt.AddEmployee(laborer.ID, walletAcc.Address)
 	return laborer
 }
 
-func (laborer *agentModels.Laborer) GetWalletAccountAddress() string {
+func (laborer *Laborer) GetWalletAccountAddress() string {
 	econ := economy.GetEconInstance()
 	walletAcc := econ.TransactionManager.WalletAccounts[laborer.ID]
 	return walletAcc.Address
 }
 
-func (laborer *agentModels.Laborer) GetGood(goodName string) good.Good {
+func (laborer *Laborer) GetGood(goodName string) good.Good {
 	if goodName == "Necessity" {
 		return laborer.Necessity
 	}
@@ -72,7 +131,7 @@ func (laborer *agentModels.Laborer) GetGood(goodName string) good.Good {
 	return nil
 }
 
-func (laborer *agentModels.Laborer) GetConsumption(goodName string) float64 {
+func (laborer *Laborer) GetConsumption(goodName string) float64 {
 	if goodName == "Necessity" {
 		return laborer.NConsumption
 	}
@@ -82,7 +141,7 @@ func (laborer *agentModels.Laborer) GetConsumption(goodName string) float64 {
 	return 0
 }
 
-func (laborer *agentModels.Laborer) Act() {
+func (laborer *Laborer) Act() {
 	econ := economy.GetEconInstance()
 	walletAcc := econ.TransactionManager.WalletAccounts[laborer.ID]
 	laborer.Wage = walletAcc.PriIC
@@ -91,7 +150,7 @@ func (laborer *agentModels.Laborer) Act() {
 	// not enough good to eat -> die
 	if (laborer.Necessity - eatAmt) < eatAmt {
 		laborer.IsAlive = false
-		fmt.Printf("Laborer %d died with balance: %f", laborer.ID, walletAcc.Balance)
+		fmt.Printf("Laborer %s died with balance: %f", laborer.ID, walletAcc.Balance)
 		econ.TransactionManager.CloseWalletAccount(laborer.ID)
 		return
 	}
@@ -144,9 +203,9 @@ func (laborer *agentModels.Laborer) Act() {
 		laborer.MinN = 0
 	}
 
-	EMkt = econ.GetMarket("Enjoyment").(*marketModels.ConsumedGoodsMarket)
-	NMkt = econ.GetMarket("Necessity").(*marketModels.ConsumedGoodsMarket)
-	LMkt = econ.GetMarket("Labor").(*marmarketModelsket.LaborMarket)
+	EMkt = econ.GetMarket("Enjoyment").(*market.ConsumedGoodsMarket)
+	NMkt = econ.GetMarket("Necessity").(*market.ConsumedGoodsMarket)
+	LMkt = econ.GetMarket("Labor").(*market.LaborMarket)
 	// post buy offer to enjoyment market
 	EMkt.AddBuyOffer(laborer, laborer.DemandForE)
 	// post buy offer to necessity market
@@ -159,14 +218,14 @@ func (laborer *agentModels.Laborer) Act() {
 	// walletAcc.Interest = 0
 }
 
-func (de *agentModels.DemandForEnjoyment) GetDemand(
+func (de *DemandForEnjoyment) GetDemand(
 	price float64,
 	consumption float64,
 ) float64 {
 	return consumption / price
 }
 
-func (de *agentModels.DemandForNecessity) GetDemand(
+func (de *DemandForNecessity) GetDemand(
 	price float64,
 	consumption float64,
 ) float64 {

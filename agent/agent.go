@@ -1,4 +1,4 @@
-package models
+package agent
 
 import (
 	"github.com/ninjadotorg/SimEconBaseline1/good"

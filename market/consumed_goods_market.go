@@ -1,11 +1,10 @@
-package handlers
+package market
 
 import (
 	"math"
 
-	agentModels "github.com/ninjadotorg/SimEconBaseline1/agent/models"
+	agent "github.com/ninjadotorg/SimEconBaseline1/agent"
 	"github.com/ninjadotorg/SimEconBaseline1/economy"
-	marketModels "github.com/ninjadotorg/SimEconBaseline1/market/models"
 	"github.com/ninjadotorg/SimEconBaseline1/transaction_manager"
 )
 
@@ -13,12 +12,34 @@ const (
 	zeta = 0.1
 )
 
+type ConsumedGoodsMarket struct {
+	GoodName          string
+	InitLow           float64
+	InitHigh          float64
+	BuyOffers         []*BuyOffer
+	SellOffers        []*SellOffer
+	MarketPrice       float64
+	MarketGoodVolume  float64
+	MarketMoneyVolume float64
+	MarketSupply      float64
+}
+
+type BuyOffer struct {
+	Buyer agent.Agent
+	Demd  Demand
+}
+
+type SellOffer struct {
+	Seller agent.Agent
+	Qty    float64
+}
+
 func NewConsumedGoodsMarket(
 	goodName string,
 	initLow float64,
 	initHigh float64,
-) *marketModels.ConsumedGoodsMarket {
-	return &marketModels.ConsumedGoodsMarket{
+) *ConsumedGoodsMarket {
+	return &ConsumedGoodsMarket{
 		GoodName:   goodName,
 		InitLow:    initLow,
 		InitHigh:   initHigh,
@@ -27,29 +48,29 @@ func NewConsumedGoodsMarket(
 	}
 }
 
-func (consumedGoodsMarket *marketModels.ConsumedGoodsMarket) AddBuyOffer(
-	buyer agentModels.Agent,
-	demand marketModels.Demand,
+func (consumedGoodsMarket *ConsumedGoodsMarket) AddBuyOffer(
+	buyer agent.Agent,
+	demand Demand,
 ) {
-	offer := &marketModels.BuyOffer{
+	offer := &BuyOffer{
 		Buyer: buyer,
 		Demd:  demand,
 	}
 	consumedGoodsMarket.BuyOffers = append(consumedGoodsMarket.BuyOffers, offer)
 }
 
-func (consumedGoodsMarket *marketModels.ConsumedGoodsMarket) AddSellOffer(
-	seller agentModels.Agent,
+func (consumedGoodsMarket *ConsumedGoodsMarket) AddSellOffer(
+	seller agent.Agent,
 	qty float64,
 ) {
-	offer := &marketModels.SellOffer{
+	offer := &SellOffer{
 		Seller: seller,
 		Qty:    qty,
 	}
 	consumedGoodsMarket.SellOffers = append(consumedGoodsMarket.SellOffers, offer)
 }
 
-func (consumedGoodsMarket *marketModels.ConsumedGoodsMarket) GetTotalSupply() float64 {
+func (consumedGoodsMarket *ConsumedGoodsMarket) GetTotalSupply() float64 {
 	var supply float64 = 0
 	for _, offer := range consumedGoodsMarket.SellOffers {
 		supply += offer.Qty
@@ -57,7 +78,7 @@ func (consumedGoodsMarket *marketModels.ConsumedGoodsMarket) GetTotalSupply() fl
 	return supply
 }
 
-func (consumedGoodsMarket *marketModels.ConsumedGoodsMarket) GetTotalDemand(price float64) float64 {
+func (consumedGoodsMarket *ConsumedGoodsMarket) GetTotalDemand(price float64) float64 {
 	var demand float64 = 0
 	for _, offer := range consumedGoodsMarket.BuyOffers {
 		comsumption := offer.Buyer.GetConsumption(consumedGoodsMarket.GoodName)
@@ -66,7 +87,7 @@ func (consumedGoodsMarket *marketModels.ConsumedGoodsMarket) GetTotalDemand(pric
 	return demand
 }
 
-func (consumedGoodsMarket *marketModels.ConsumedGoodsMarket) Perform() {
+func (consumedGoodsMarket *ConsumedGoodsMarket) Perform() {
 	econ := economy.GetEconInstance()
 	var low, high, price float64
 	if econ.TimeStep == 0 {
@@ -124,6 +145,6 @@ func (consumedGoodsMarket *marketModels.ConsumedGoodsMarket) Perform() {
 	consumedGoodsMarket.MarketSupply = totalSuppy
 
 	// reset
-	consumedGoodsMarket.BuyOffers = []*marketModels.BuyOffer{}
-	consumedGoodsMarket.SellOffers = []*marketModels.SellOffer{}
+	consumedGoodsMarket.BuyOffers = []*BuyOffer{}
+	consumedGoodsMarket.SellOffers = []*SellOffer{}
 }

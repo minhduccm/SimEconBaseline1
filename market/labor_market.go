@@ -1,4 +1,4 @@
-package handlers
+package market
 
 import (
 	"math"
@@ -6,18 +6,34 @@ import (
 	"github.com/ninjadotorg/SimEconBaseline1/common"
 	"github.com/ninjadotorg/SimEconBaseline1/economy"
 	"github.com/ninjadotorg/SimEconBaseline1/good"
-	marketModels "github.com/ninjadotorg/SimEconBaseline1/market/models"
 )
 
-func NewLaborMarket() *marketModels.LaborMarket {
-	return &marketModels.LaborMarket{
-		Employees:   []*marketModels.Employee{},
-		Employers:   []*marketModels.Employer{},
+type Employee struct {
+	WalletAddress string
+}
+
+type Employer struct {
+	Labor         *good.Labor
+	WageBudget    float64 // total wage budget
+	Name          string  // name of the employer
+	WalletAddress string
+}
+
+type LaborMarket struct {
+	Employees   []*Employee
+	Employers   []*Employer
+	TotalBudget float64
+}
+
+func NewLaborMarket() *LaborMarket {
+	return &LaborMarket{
+		Employees:   []*Employee{},
+		Employers:   []*Employer{},
 		TotalBudget: 0,
 	}
 }
 
-func (laborMarket *marketModels.LaborMarket) AddEmployee(agentID, walletAddress string) {
+func (laborMarket *LaborMarket) AddEmployee(agentID, walletAddress string) {
 	employee := &Employee{
 		AgentID:       agentID,
 		WalletAddress: walletAddress,
@@ -25,7 +41,7 @@ func (laborMarket *marketModels.LaborMarket) AddEmployee(agentID, walletAddress 
 	laborMarket.Employees = append(laborMarket.Employees, employee)
 }
 
-func (laborMarket *marketModels.LaborMarket) AddEmployer(
+func (laborMarket *LaborMarket) AddEmployer(
 	agentID string,
 	walletAddress string,
 	labor *good.Labor,
@@ -41,7 +57,7 @@ func (laborMarket *marketModels.LaborMarket) AddEmployer(
 	laborMarket.TotalBudget += wageBudget
 }
 
-func (laborMarket *marketModels.LaborMarket) Perform() {
+func (laborMarket *LaborMarket) Perform() {
 	// TODO: should shuffle employers & employees
 
 	econ := economy.GetEconInstance()
