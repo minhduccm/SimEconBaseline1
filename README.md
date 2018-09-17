@@ -1,4 +1,4 @@
-# SimEconBaseline1
+# Sim Eco 0.0.1
 ## Money circulation
 ![Money circulation](https://github.com/minhduccm/SimEconBaseline1/blob/master/money_circulation.png)
 
