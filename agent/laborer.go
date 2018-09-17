@@ -81,7 +81,7 @@ type Laborer struct {
 	// wage from employment
 	Wage float64
 
-	// each agent has an unique ID that is also used as the bank account number
+	// each agent has an unique ID that is also used to retrieve the bank account number
 	ID string
 
 	// agent status
@@ -142,6 +142,18 @@ func (laborer *Laborer) GetConsumption(goodName string) float64 {
 		return laborer.EConsumption
 	}
 	return 0
+}
+
+func (laborer *Laborer) PrintLastState() {
+	fmt.Printf("Labor ID: %s \n", laborer.ID)
+	fmt.Printf("**** Enjoyment Qty: %f \n", laborer.Enjoyment.Quantity)
+	fmt.Printf("**** Necessity Qty: %f \n", laborer.Necessity.Quantity)
+	fmt.Printf("**** Consumption: %f \n", laborer.Consumption)
+	fmt.Printf("**** Consumption for enjoyment: %f \n", laborer.EConsumption)
+	fmt.Printf("**** Consumption for necessity: %f \n", laborer.NConsumption)
+	fmt.Printf("**** Minimum necessity (in real quantity) to buy in the current step: %f \n", laborer.MinN)
+	fmt.Printf("**** Income: %f \n", laborer.Income)
+	fmt.Printf("**** Wage: %f \n\n", laborer.Wage)
 }
 
 func (laborer *Laborer) Act() {

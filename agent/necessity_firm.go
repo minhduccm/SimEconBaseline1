@@ -45,6 +45,10 @@ func NewNecessityFirm(
 	}
 }
 
+func (necessityFirm *NecessityFirm) PrintLastState() {
+	necessityFirm.ConsumedGoodsFirm.PrintLastState()
+}
+
 func (necessityFirm *NecessityFirm) Act() {
 	necessityFirm.ConsumedGoodsFirm.Act()
 }

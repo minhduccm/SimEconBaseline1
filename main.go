@@ -14,11 +14,11 @@ const (
 	STEP_SIZE = 50
 
 	// number of steps to run
-	NUM_STEP = 10000
+	NUM_STEP = 100
 
-	NUM_LABORERS = 450
-	NUM_EFIRMS   = 10
-	NUM_NFIRMS   = 10
+	NUM_LABORERS = 2
+	NUM_EFIRMS   = 1
+	NUM_NFIRMS   = 1
 
 	MIN_INIT_E_PRICE = 0.1
 	MAX_INIT_E_PRICE = 5
@@ -73,7 +73,6 @@ func main() {
 	econ.Markets["Capital"] = cMkt
 	econ.Markets["Enjoyment"] = eMkt
 	econ.Markets["Necessity"] = nMkt
-	econ.ConsumedGoodsMarkets = []*market.ConsumedGoodsMarket{eMkt, nMkt}
 
 	// Create and add firms
 	cFirm := agent.NewCapitalFirm(

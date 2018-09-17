@@ -5,14 +5,12 @@ import (
 
 	"github.com/ninjadotorg/SimEconBaseline1/abstraction"
 	"github.com/ninjadotorg/SimEconBaseline1/common"
-	market "github.com/ninjadotorg/SimEconBaseline1/market"
 )
 
 type Economy struct {
-	Agents               []abstraction.Agent
-	DeadAgents           []abstraction.Agent
-	Markets              map[string]abstraction.Market
-	ConsumedGoodsMarkets []*market.ConsumedGoodsMarket
+	Agents     []abstraction.Agent
+	DeadAgents []abstraction.Agent
+	Markets    map[string]abstraction.Market
 }
 
 var econ *Economy
@@ -22,10 +20,9 @@ func GetEconInstance() *Economy {
 		return econ
 	}
 	econ = &Economy{
-		Agents:               []abstraction.Agent{},
-		DeadAgents:           []abstraction.Agent{},
-		Markets:              map[string]abstraction.Market{},
-		ConsumedGoodsMarkets: []*market.ConsumedGoodsMarket{},
+		Agents:     []abstraction.Agent{},
+		DeadAgents: []abstraction.Agent{},
+		Markets:    map[string]abstraction.Market{},
 	}
 	return econ
 }
@@ -40,16 +37,13 @@ func (econ *Economy) Run(num_steps int) {
 }
 
 func (econ *Economy) Step() {
+	fmt.Printf("\n--------------------Step %d------------------------ \n", common.TimeStep)
 	for _, agent := range econ.Agents {
+		agent.PrintLastState()
 		agent.Act()
 	}
 	for _, market := range econ.Markets {
 		market.Perform()
 	}
-	// econ.TimeStep += 1
 	common.IncreaseTimeStep()
 }
-
-// func (econ *Economy) GetMarket(marketName string) market.Market {
-// 	return econ.Markets[marketName]
-// }

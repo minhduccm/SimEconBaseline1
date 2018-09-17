@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/ninjadotorg/SimEconBaseline1/abstraction"
@@ -195,6 +196,28 @@ func (cgf *ConsumedGoodsFirm) UseCapital() float64 {
  */
 func (cgf *ConsumedGoodsFirm) ConvertToProduct(labor, c float64) float64 {
 	return cgf.TechCoefficient * math.Pow(labor, cgf.Beta) * math.Pow(c, 1-cgf.Beta)
+}
+
+func (cgf *ConsumedGoodsFirm) PrintLastState() {
+	fmt.Printf("Consumed goods firm ID: %s \n", cgf.Firm.ID)
+	fmt.Printf("**** Consumed goods firm type: %s \n", cgf.ProductName)
+
+	fmt.Printf("**** Number of labors: %f \n", cgf.Firm.Labor.GetQuantity())
+	fmt.Printf("**** Capacity (max output the firm could produce with the current capital and labor): %f \n", cgf.Firm.Capacity)
+	fmt.Printf("**** Output: %f \n", cgf.Firm.Output)
+	fmt.Printf("**** Wage budget: %f \n", cgf.Firm.WageBudget)
+	fmt.Printf("**** Wage per worker: %f \n", cgf.Firm.Wage)
+	fmt.Printf("**** Revenue: %f \n", cgf.Firm.Revenue)
+	fmt.Printf("**** Profit: %f \n", cgf.Firm.Profit)
+	fmt.Printf("**** Marginal profit: %f \n", cgf.Firm.MarginalProfit)
+	fmt.Printf("**** Cost ot capital: %f \n", cgf.Firm.CapitalCost)
+	fmt.Printf("**** Total cost: %f \n", cgf.Firm.TotalCost)
+	fmt.Printf("**** Technology coefficient in the production function: %f \n", cgf.TechCoefficient)
+
+	fmt.Printf("**** Product qty that the firm is producing/selling: %f \n", cgf.Product.GetQuantity())
+
+	fmt.Printf("**** Capital qty that owned by the firm: %f \n", cgf.CapitalQty)
+	fmt.Printf("**** Present value of capital: %f \n\n", cgf.CapitalVal)
 }
 
 func (cgf *ConsumedGoodsFirm) Act() {

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/ninjadotorg/SimEconBaseline1/abstraction"
@@ -58,6 +59,23 @@ func NewCapitalFirm(
 	cFirm.LMkt.AddEmployer(firm.ID, walletAcc.Address, firm.Labor, firm.WageBudget)
 
 	return cFirm
+}
+
+func (capitalFirm *CapitalFirm) PrintLastState() {
+	fmt.Printf("Capital firm ID: %s \n", capitalFirm.Firm.ID)
+	fmt.Printf("**** Number of labors: %f \n", capitalFirm.Firm.Labor.GetQuantity())
+	fmt.Printf("**** Capacity (max output the firm could produce with the current capital and labor): %f \n", capitalFirm.Firm.Capacity)
+	fmt.Printf("**** Output: %f \n", capitalFirm.Firm.Output)
+	fmt.Printf("**** Wage budget: %f \n", capitalFirm.Firm.WageBudget)
+	fmt.Printf("**** Wage per worker: %f \n", capitalFirm.Firm.Wage)
+	fmt.Printf("**** Revenue: %f \n", capitalFirm.Firm.Revenue)
+	fmt.Printf("**** Profit: %f \n", capitalFirm.Firm.Profit)
+	fmt.Printf("**** Marginal profit: %f \n", capitalFirm.Firm.MarginalProfit)
+	fmt.Printf("**** Cost ot capital: %f \n", capitalFirm.Firm.CapitalCost)
+	fmt.Printf("**** Total cost: %f \n", capitalFirm.Firm.TotalCost)
+	fmt.Printf("**** Technology coefficient in the production function: %f \n", capitalFirm.TechCoefficient)
+	fmt.Printf("**** Capital price (fixed for now): %f \n\n", capitalFirm.Price)
+
 }
 
 func (capitalFirm *CapitalFirm) Act() {
