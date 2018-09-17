@@ -3,11 +3,11 @@ package agent
 import (
 	"math"
 
+	"github.com/ninjadotorg/SimEconBaseline1/abstraction"
 	"github.com/ninjadotorg/SimEconBaseline1/common"
-	"github.com/ninjadotorg/SimEconBaseline1/economy"
 	"github.com/ninjadotorg/SimEconBaseline1/good"
-	market "github.com/ninjadotorg/SimEconBaseline1/market"
 	"github.com/ninjadotorg/SimEconBaseline1/transaction_manager"
+	"github.com/ninjadotorg/SimEconBaseline1/util"
 )
 
 type ConsumedGoodsFirm struct {
@@ -49,7 +49,16 @@ type ConsumedGoodsFirm struct {
 	/**
 	 * product the firm is producing/selling (enjoyment or necessity)
 	 */
-	Product good.Good
+	Product abstraction.Good
+
+	// Product market
+	PMkt abstraction.ConsumedGoodsMarket
+
+	// labor market
+	LMkt abstraction.LaborMarket
+
+	// capital market
+	CMkt abstraction.CapitalMarket
 
 	/**
 	 * capital owned by the firm
@@ -97,7 +106,7 @@ func (averager *Averager) Update(val float64) float64 {
 	if len(averager.Data) > averager.Size {
 		averager.Sum -= 0 // TODO: averager.Data.RemoveFirst()
 	}
-	return averager.Sum / len(averager.Data)
+	return averager.Sum / float64(len(averager.Data))
 }
 
 func NewConsumedGoodsFirm(
@@ -107,13 +116,16 @@ func NewConsumedGoodsFirm(
 	initWageBudget float64,
 	initCapital int,
 	capitalProducers []*CapitalFirm,
+	pMkt abstraction.ConsumedGoodsMarket,
+	lMkt abstraction.LaborMarket,
+	cMkt abstraction.CapitalMarket,
 ) *ConsumedGoodsFirm {
 	firm := NewFirm(initWalletBal)
 	producerIDs := []string{}
 	for _, cp := range capitalProducers {
-		producerIDs = append(producerIDs, cp.ID)
+		producerIDs = append(producerIDs, cp.Firm.ID)
 	}
-	capital := NewCapital(initCapital, firm.ID, producerIDs)
+	capital := good.NewCapital(initCapital, firm.ID, producerIDs)
 	firm.Output = initOutput
 	firm.WageBudget = initWageBudget
 	firm.Loan = 0
@@ -123,20 +135,23 @@ func NewConsumedGoodsFirm(
 
 	// post wage to the labor market so that the firm
 	// gets employees before the first round begins
-	econ := economy.GetEconInstance()
-	walletAcc := econ.TransactionManager.WalletAccounts[firm.ID]
-	LMkt := econ.GetMarket("Labor").(*market.LaborMarket)
-	LMkt.AddEmployer(firm.ID, walletAcc.Address, firm.Labor, firm.WageBudget)
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
+	walletAcc := transactionManager.WalletAccounts[firm.ID]
 
-	return &ConsumedGoodsFirm{
+	consumedGoodsFirm := &ConsumedGoodsFirm{
 		Firm:        firm,
 		Capital:     capital,
 		ProductName: productName,
+		PMkt:        pMkt,
+		LMkt:        lMkt,
+		CMkt:        cMkt,
 	}
+	consumedGoodsFirm.LMkt.AddEmployer(firm.ID, walletAcc.Address, firm.Labor, firm.WageBudget)
+	return consumedGoodsFirm
 }
 
 func (cgf *ConsumedGoodsFirm) UseCapital() float64 {
-	econ := economy.GetEconInstance()
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
 	var cost float64 = 0
 	capital := cgf.Capital
 	machines := capital.Machines
@@ -144,7 +159,7 @@ func (cgf *ConsumedGoodsFirm) UseCapital() float64 {
 	for i, m := range machines {
 		m.RemainingLife -= 1
 		cost += m.Price
-		econ.TransactionManager.Pay(
+		transactionManager.Pay(
 			capital.OwnerID,
 			m.ProducerID,
 			m.Price,
@@ -158,7 +173,7 @@ func (cgf *ConsumedGoodsFirm) UseCapital() float64 {
 
 	remainingMachines := []*good.Machine{}
 	for i, m := range machines {
-		if !common.IsExisted(removingMachineIdxs, i) {
+		if !util.IsExisted(removingMachineIdxs, i) {
 			remainingMachines = append(remainingMachines, m)
 		}
 	}
@@ -189,10 +204,8 @@ func (cgf *ConsumedGoodsFirm) Act() {
 	capitalQty := cgf.Capital.Quantity
 
 	// get firm finance information
-	econ := economy.GetEconInstance()
-	walletAcc := econ.TransactionManager.WalletAccounts[firm.ID]
-	pMkt := econ.GetMarket(cgf.ProductName).(*market.ConsumedGoodsMarket)
-	lMkt := econ.GetMarket("Labor").(*market.ConsumedGoodsMarket)
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
+	walletAcc := transactionManager.WalletAccounts[firm.ID]
 
 	firm.Revenue = walletAcc.PriIC
 	firm.Loan = 0                                       // TODO: because Bank has not existed yet
@@ -207,7 +220,7 @@ func (cgf *ConsumedGoodsFirm) Act() {
 	}
 
 	if laborQty > 0 {
-		if econ.TimeStep == 0 {
+		if common.TimeStep == 0 {
 			newOutput = firm.Output
 			newWageBudget = firm.WageBudget
 		} else {
@@ -220,12 +233,10 @@ func (cgf *ConsumedGoodsFirm) Act() {
 			// TODO: pay interest on loans (if any)
 
 			// compute marginal cost
-			var MC float64 = firm.Wage / cgf.Beta * math.Pow(cgf.TechCoefficient, -1/cgf.Beta)
-			*math.Pow(firm.Output, 1/cgf.Beta-1)
-			*math.Pow(capitalQty, 1-1/cgf.Beta)
+			var MC float64 = firm.Wage / cgf.Beta * math.Pow(cgf.TechCoefficient, -1/cgf.Beta) * math.Pow(firm.Output, 1/cgf.Beta-1) * math.Pow(capitalQty, 1-1/cgf.Beta)
 
-			pPrice = pMkt.MarketPrice         // product price
-			firm.MarginalProfit = pPrice - MC // marginal profit
+			pPrice = cgf.PMkt.GetMarketPrice() // product price
+			firm.MarginalProfit = pPrice - MC  // marginal profit
 
 			// set new output
 			newOutput = firm.Output * (1 + cgf.Phi*firm.MarginalProfit/pPrice)
@@ -242,35 +253,34 @@ func (cgf *ConsumedGoodsFirm) Act() {
 
 	//////////////////////////
 	if cgf.Product.GetQuantity() > 0 {
-		pMkt.AddSellOffer(cgf, cgf.Product.GetQuantity())
+		cgf.PMkt.AddSellOffer(cgf, cgf.Product.GetQuantity())
 	}
-	LMkt.AddEmployer(firm.ID, walletAcc.Address, firm.Labor, newWageBudget)
+	cgf.LMkt.AddEmployer(firm.ID, walletAcc.Address, firm.Labor, newWageBudget)
 
 	// TODO: pay loan (if any)
 
 	// firgure out buying capital decision
-	buyCapital(cgf, econ, newOutput, newWageBudget, walletAcc)
+	buyCapital(cgf, newOutput, newWageBudget, walletAcc)
 }
 
 func buyCapital(
 	cgf *ConsumedGoodsFirm,
-	econ *economy.Economy,
 	newOutput float64,
 	newWageBudget float64,
 	walletAcc *transaction_manager.WalletAccount,
 ) {
-	cMkt := econ.GetMarket("Capital").(*market.ConsumedGoodsMarket)
+	cMkt := cgf.CMkt
 	firm := cgf.Firm
-	laborQty := firm.Labor.Quantity
-	capitalQty := cgf.Capital.Quantity
+	// laborQty := firm.Labor.Quantity
+	// capitalQty := cgf.Capital.Quantity
 	var oldCapitalVal float64 = cgf.CapitalVal
 	cgf.CapitalQty = cgf.Capital.Quantity          // quantity of machines
 	cgf.CapitalVal = cgf.Capital.GetPresentValue() // total present value of capital
 	firm.CapitalCost = cgf.UseCapital()
 
-	if econ.TimeStep > 0 {
+	if common.TimeStep > 0 {
 		var capitalToBuy int = 0 // number of machines to purchase
-		var capitalPrice float64 = cMkt.AvgPrice
+		var capitalPrice float64 = cMkt.GetAvgPrice()
 		var IR float64 = 0                                                 // TODO: Bank.getLoanIR() // interest rate
 		var IK float64 = firm.Profit / oldCapitalVal                       // rate of return on capital
 		var utilization float64 = newOutput / firm.Capacity                // capacity utilization
@@ -281,7 +291,7 @@ func buyCapital(
 		// buy capital if rate of return on capital >= interest rate,
 		// capacity utilization >= eUtilThreshold,
 		// marginal revenue >= capital price
-		if IK >= IR && utilization >= eUtilThreshold && MR >= capitalPrice {
+		if IK >= IR && utilization >= cgf.EUtilThreshold && MR >= capitalPrice {
 			capitalToBuy += 1
 		}
 
@@ -289,7 +299,7 @@ func buyCapital(
 		var avgProfit float64 = 0 // TODO: pfAvger.update(math.Abs(firm.Profit))
 
 		// hacking
-		if IK >= IR && utilization > 0.8 && firm.Profit > 5*avgProfit && econ.TimeStep > 2000 {
+		if IK >= IR && utilization > 0.8 && firm.Profit > 5*avgProfit && common.TimeStep > 2000 {
 			capitalToBuy += 1
 		}
 
@@ -298,7 +308,7 @@ func buyCapital(
 		 * still decides to expand in this case, which does not really make
 		 * sense)
 		 */
-		if firm.Profit < -5*avgProfit && econ.TimeStep > 2000 {
+		if firm.Profit < -5*avgProfit && common.TimeStep > 2000 {
 			capitalToBuy -= 1
 		}
 		/***************************************************************/
@@ -310,18 +320,18 @@ func buyCapital(
 
 			var x float64 = cgf.CapitalQty - scrapped
 			for {
-				if firm.Output/cgf.ConvertToProduct(firm.Labor.Quantity, x) > cgf.RUtilThreshold && x < cgf.CapitalQty && walletAcc.priIC/x > capitalPrice {
+				if firm.Output/cgf.ConvertToProduct(firm.Labor.Quantity, x) > cgf.RUtilThreshold && x < cgf.CapitalQty && walletAcc.PriIC/x > capitalPrice {
 					x += 1
 					continue
 				}
 				break
 			}
-			capitalToBuy += scrapped + x - cgf.CapitalQty
+			capitalToBuy += int(scrapped + x - float64(cgf.CapitalQty))
 		}
 
 		// buy capital if there's none left
 		if cgf.Capital.Quantity < 1 {
-			capitalToBuy = math.Max(1, capitalToBuy)
+			capitalToBuy = int(math.Max(1, float64(capitalToBuy)))
 		}
 
 		// post buy offer to capital market
@@ -337,4 +347,22 @@ func buyCapital(
 	walletAcc.PriIC = 0
 	firm.Labor.Decrease(firm.Labor.Quantity) // clear unused labor
 	// TODO: loan = -acct.getBalance(Bank.SAVINGS)
+}
+
+func (cgf *ConsumedGoodsFirm) GetGood(goodName string) abstraction.Good {
+	return cgf.Product
+}
+
+func (cgf *ConsumedGoodsFirm) GetWalletAccountAddress() string {
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
+	walletAcc := transactionManager.WalletAccounts[cgf.Firm.ID]
+	return walletAcc.Address
+}
+
+func (cgf *ConsumedGoodsFirm) GetConsumption(goodName string) float64 {
+	return 0.0
+}
+
+func (cgf *ConsumedGoodsFirm) GetID() string {
+	return cgf.Firm.ID
 }

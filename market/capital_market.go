@@ -3,7 +3,7 @@ package market
 import (
 	"math/rand"
 
-	"github.com/ninjadotorg/SimEconBaseline1/agent"
+	"github.com/ninjadotorg/SimEconBaseline1/abstraction"
 	"github.com/ninjadotorg/SimEconBaseline1/common"
 	"github.com/ninjadotorg/SimEconBaseline1/good"
 )
@@ -37,7 +37,7 @@ type CapitalBuyOffer struct {
 }
 
 type CapitalSellOffer struct {
-	Seller   *agent.CapitalFirm
+	Seller   abstraction.Agent
 	Price    float64
 	Capacity int
 }
@@ -64,7 +64,7 @@ func (cm *CapitalMarket) AddCapitalBuyOffer(
 }
 
 func (cm *CapitalMarket) AddCapitalSellOffer(
-	seller *agent.CapitalFirm,
+	seller abstraction.Agent,
 	price float64,
 	capacity int,
 ) {
@@ -75,8 +75,8 @@ func (cm *CapitalMarket) AddCapitalSellOffer(
 	}
 	cm.CapitalSellOffers = append(cm.CapitalSellOffers, offer)
 	cm.TotalMetric += 1 / price
-	cm.TotalPrice += price * capacity
-	cm.Supply += capacity
+	cm.TotalPrice += price * float64(capacity)
+	cm.Supply += float64(capacity)
 }
 
 func (cm *CapitalMarket) Perform() {
@@ -102,13 +102,13 @@ func (cm *CapitalMarket) Perform() {
 						picked = sellOffer
 						removingIdx = idx
 						picked.Capacity -= buyOffer.Quantity
-						cm.MktGoodVol += buyOffer.Quantity
+						cm.MktGoodVol += float64(buyOffer.Quantity)
 					}
 					break
 				}
 			}
 		}
-		buyOffer.Capital.Add(buyOffer.Quantity, picked.Price, common.CAPITAL_LIFE, picked.Seller.ID)
+		buyOffer.Capital.Add(buyOffer.Quantity, picked.Price, common.CAPITAL_LIFE, picked.Seller.GetID())
 		if picked.Capacity <= 0 {
 			cm.CapitalSellOffers = append(cm.CapitalSellOffers[:removingIdx], cm.CapitalSellOffers[removingIdx+1:]...)
 		}
@@ -119,4 +119,8 @@ func (cm *CapitalMarket) Perform() {
 	cm.Supply = 0
 	cm.CapitalBuyOffers = []*CapitalBuyOffer{}
 	cm.CapitalSellOffers = []*CapitalSellOffer{}
+}
+
+func (cm *CapitalMarket) GetAvgPrice() float64 {
+	return cm.AvgPrice
 }

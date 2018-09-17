@@ -3,18 +3,16 @@ package economy
 import (
 	"fmt"
 
-	agent "github.com/ninjadotorg/SimEconBaseline1/agent"
+	"github.com/ninjadotorg/SimEconBaseline1/abstraction"
+	"github.com/ninjadotorg/SimEconBaseline1/common"
 	market "github.com/ninjadotorg/SimEconBaseline1/market"
-	"github.com/ninjadotorg/SimEconBaseline1/transaction_manager"
 )
 
 type Economy struct {
-	TimeStep             int
-	Agents               []agent.Agent
-	DeadAgents           []agent.Agent
-	Markets              map[string]market.Market
+	Agents               []abstraction.Agent
+	DeadAgents           []abstraction.Agent
+	Markets              map[string]abstraction.Market
 	ConsumedGoodsMarkets []*market.ConsumedGoodsMarket
-	TransactionManager   *transaction_manager.TransactionManager
 }
 
 var econ *Economy
@@ -24,14 +22,10 @@ func GetEconInstance() *Economy {
 		return econ
 	}
 	econ = &Economy{
-		TimeStep:             0,
-		Agents:               []agent.Agent{},
-		DeadAgents:           []agent.Agent{},
-		Markets:              map[string]market.Market{},
+		Agents:               []abstraction.Agent{},
+		DeadAgents:           []abstraction.Agent{},
+		Markets:              map[string]abstraction.Market{},
 		ConsumedGoodsMarkets: []*market.ConsumedGoodsMarket{},
-		TransactionManager: &transaction_manager.TransactionManager{
-			WalletAccounts: map[string]*transaction_manager.WalletAccount{},
-		},
 	}
 	return econ
 }
@@ -52,9 +46,10 @@ func (econ *Economy) Step() {
 	for _, market := range econ.Markets {
 		market.Perform()
 	}
-	econ.TimeStep += 1
+	// econ.TimeStep += 1
+	common.IncreaseTimeStep()
 }
 
-func (econ *Economy) GetMarket(marketName string) market.Market {
-	return econ.Markets[marketName]
-}
+// func (econ *Economy) GetMarket(marketName string) market.Market {
+// 	return econ.Markets[marketName]
+// }

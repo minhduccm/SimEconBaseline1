@@ -3,8 +3,8 @@ package market
 import (
 	"math"
 
-	agent "github.com/ninjadotorg/SimEconBaseline1/agent"
-	"github.com/ninjadotorg/SimEconBaseline1/economy"
+	"github.com/ninjadotorg/SimEconBaseline1/abstraction"
+	"github.com/ninjadotorg/SimEconBaseline1/common"
 	"github.com/ninjadotorg/SimEconBaseline1/transaction_manager"
 )
 
@@ -25,12 +25,12 @@ type ConsumedGoodsMarket struct {
 }
 
 type BuyOffer struct {
-	Buyer agent.Agent
-	Demd  Demand
+	Buyer abstraction.Agent
+	Demd  abstraction.Demand
 }
 
 type SellOffer struct {
-	Seller agent.Agent
+	Seller abstraction.Agent
 	Qty    float64
 }
 
@@ -49,8 +49,8 @@ func NewConsumedGoodsMarket(
 }
 
 func (consumedGoodsMarket *ConsumedGoodsMarket) AddBuyOffer(
-	buyer agent.Agent,
-	demand Demand,
+	buyer abstraction.Agent,
+	demand abstraction.Demand,
 ) {
 	offer := &BuyOffer{
 		Buyer: buyer,
@@ -60,7 +60,7 @@ func (consumedGoodsMarket *ConsumedGoodsMarket) AddBuyOffer(
 }
 
 func (consumedGoodsMarket *ConsumedGoodsMarket) AddSellOffer(
-	seller agent.Agent,
+	seller abstraction.Agent,
 	qty float64,
 ) {
 	offer := &SellOffer{
@@ -81,16 +81,16 @@ func (consumedGoodsMarket *ConsumedGoodsMarket) GetTotalSupply() float64 {
 func (consumedGoodsMarket *ConsumedGoodsMarket) GetTotalDemand(price float64) float64 {
 	var demand float64 = 0
 	for _, offer := range consumedGoodsMarket.BuyOffers {
-		comsumption := offer.Buyer.GetConsumption(consumedGoodsMarket.GoodName)
+		consumption := offer.Buyer.GetConsumption(consumedGoodsMarket.GoodName)
 		demand += offer.Demd.GetDemand(price, consumption)
 	}
 	return demand
 }
 
 func (consumedGoodsMarket *ConsumedGoodsMarket) Perform() {
-	econ := economy.GetEconInstance()
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
 	var low, high, price float64
-	if econ.TimeStep == 0 {
+	if common.TimeStep == 0 {
 		low = consumedGoodsMarket.InitLow
 		high = consumedGoodsMarket.InitHigh
 	} else {
@@ -116,10 +116,10 @@ func (consumedGoodsMarket *ConsumedGoodsMarket) Perform() {
 	vol := math.Min(totalDemand, totalSuppy)
 	if vol > 0.1 {
 		for _, offer := range consumedGoodsMarket.BuyOffers {
-			comsumption := offer.Buyer.GetConsumption(consumedGoodsMarket.GoodName)
+			consumption := offer.Buyer.GetConsumption(consumedGoodsMarket.GoodName)
 			qty := offer.Demd.GetDemand(price, consumption) / totalDemand * vol
 			payAmt := qty * price
-			econ.TransactionManager.PayFrom(
+			transactionManager.PayFrom(
 				offer.Buyer.GetWalletAccountAddress(),
 				payAmt,
 			)
@@ -129,10 +129,10 @@ func (consumedGoodsMarket *ConsumedGoodsMarket) Perform() {
 		for _, offer := range consumedGoodsMarket.SellOffers {
 			qty := offer.Qty / totalSuppy * vol
 			payAmt := qty * price
-			econ.TransactionManager.PayTo(
+			transactionManager.PayTo(
 				offer.Seller.GetWalletAccountAddress(),
 				payAmt,
-				transaction_manager.PRIIC,
+				common.PRIIC,
 			)
 			good := offer.Seller.GetGood(consumedGoodsMarket.GoodName)
 			good.Decrease(qty)
@@ -147,4 +147,8 @@ func (consumedGoodsMarket *ConsumedGoodsMarket) Perform() {
 	// reset
 	consumedGoodsMarket.BuyOffers = []*BuyOffer{}
 	consumedGoodsMarket.SellOffers = []*SellOffer{}
+}
+
+func (consumedGoodsMarket *ConsumedGoodsMarket) GetMarketPrice() float64 {
+	return consumedGoodsMarket.MarketPrice
 }

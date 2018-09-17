@@ -6,6 +6,7 @@ import (
 	agent "github.com/ninjadotorg/SimEconBaseline1/agent"
 	"github.com/ninjadotorg/SimEconBaseline1/economy"
 	market "github.com/ninjadotorg/SimEconBaseline1/market"
+	"github.com/ninjadotorg/SimEconBaseline1/transaction_manager"
 )
 
 const (
@@ -47,8 +48,9 @@ const (
 )
 
 func main() {
-	fmt.Println("hahah")
+	fmt.Println("hahaha")
 	econ := economy.GetEconInstance()
+	_ = transaction_manager.GetTransactionManagerInstance()
 
 	// Create and add markets
 	eMkt := market.NewConsumedGoodsMarket(
@@ -77,6 +79,8 @@ func main() {
 	cFirm := agent.NewCapitalFirm(
 		CFIRM_INIT_CHECKING,
 		CFIRM_INIT_WAGEBUDGET,
+		lMkt,
+		cMkt,
 	)
 	cFirms := []*agent.CapitalFirm{cFirm}
 
@@ -89,24 +93,36 @@ func main() {
 			EFIRM_INIT_WAGEBUDGET,
 			EFIRM_INIT_CAPITAL,
 			cFirms,
+			eMkt,
+			lMkt,
+			cMkt,
 		)
 		eFirms = append(eFirms, eFirm)
 	}
 	for i := 0; i < NUM_NFIRMS; i++ {
-		nFirm := agent.NewEnjoymentFirm(
+		nFirm := agent.NewNecessityFirm(
 			NFIRM_INIT_CHECKING,
 			NFIRM_INIT_OUTPUT,
 			NFIRM_INIT_WAGEBUDGET,
 			NFIRM_INIT_CAPITAL,
 			cFirms,
+			nMkt,
+			lMkt,
+			cMkt,
 		)
 		nFirms = append(nFirms, nFirm)
 	}
 
 	// add firm agents
 	econ.Agents = append(econ.Agents, cFirm)
-	econ.Agents = append(econ.Agents, eFirms...)
-	econ.Agents = append(econ.Agents, nFirms...)
+	for _, eFirm := range eFirms {
+		econ.Agents = append(econ.Agents, eFirm)
+	}
+	for _, nFirm := range nFirms {
+		econ.Agents = append(econ.Agents, nFirm)
+	}
+	// econ.Agents = append(econ.Agents, eFirms...)
+	// econ.Agents = append(econ.Agents, nFirms...)
 
 	// Create and add laborers
 	for i := 0; i < NUM_LABORERS; i++ {
@@ -116,6 +132,9 @@ func main() {
 			initN,
 			LABORER_INIT_CHECKING,
 			LABORER_INIT_SAVINGS_RATE,
+			eMkt,
+			nMkt,
+			lMkt,
 		)
 		econ.Agents = append(econ.Agents, laborer)
 	}

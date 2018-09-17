@@ -5,8 +5,20 @@ import (
 	"github.com/ninjadotorg/SimEconBaseline1/util"
 )
 
+var transactionManager *TransactionManager
+
 type TransactionManager struct {
 	WalletAccounts map[string]*WalletAccount
+}
+
+func GetTransactionManagerInstance() *TransactionManager {
+	if transactionManager != nil {
+		return transactionManager
+	}
+	transactionManager = &TransactionManager{
+		WalletAccounts: map[string]*WalletAccount{},
+	}
+	return transactionManager
 }
 
 func (transManager *TransactionManager) OpenWalletAccount(

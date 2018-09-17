@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/ninjadotorg/SimEconBaseline1/economy"
+	"github.com/ninjadotorg/SimEconBaseline1/abstraction"
+	"github.com/ninjadotorg/SimEconBaseline1/common"
 	"github.com/ninjadotorg/SimEconBaseline1/good"
-	market "github.com/ninjadotorg/SimEconBaseline1/market"
+	"github.com/ninjadotorg/SimEconBaseline1/transaction_manager"
 	"github.com/ninjadotorg/SimEconBaseline1/util"
 )
 
@@ -32,13 +33,13 @@ type DemandForNecessity struct{}
 
 type Laborer struct {
 	// enjoyment market
-	// EMkt *market.ConsumedGoodsMarket
+	EMkt abstraction.ConsumedGoodsMarket
 
-	// // necessity market
-	// NMkt *market.ConsumedGoodsMarket
+	// necessity market
+	NMkt abstraction.ConsumedGoodsMarket
 
-	// // labor market
-	// LMkt *market.LaborMarket
+	// labor market
+	LMkt abstraction.LaborMarket
 
 	// enjoyment good
 	Enjoyment *good.Enjoyment
@@ -92,8 +93,10 @@ func NewLaborer(
 	initNQty float64,
 	initBalance float64,
 	initSavingsRate float64,
+	eMkt abstraction.ConsumedGoodsMarket,
+	nMkt abstraction.ConsumedGoodsMarket,
+	lMkt abstraction.LaborMarket,
 ) *Laborer {
-	econ := economy.GetEconInstance()
 	laborer := &Laborer{
 		ID:          util.NewUUID(),
 		IsAlive:     true,
@@ -102,26 +105,26 @@ func NewLaborer(
 		SavingsRate: initSavingsRate,
 		DemandForE:  &DemandForEnjoyment{},
 		DemandForN:  &DemandForNecessity{},
+		EMkt:        eMkt,
+		NMkt:        nMkt,
+		LMkt:        lMkt,
 	}
 
-	econ.TransactionManager.OpenWalletAccount(
-		laborer.ID,
-		initBalance,
-	)
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
+	transactionManager.OpenWalletAccount(laborer.ID, initBalance)
+	walletAcc := transactionManager.WalletAccounts[laborer.ID]
+	laborer.LMkt.AddEmployee(laborer.ID, walletAcc.Address)
 
-	walletAcc := econ.TransactionManager.WalletAccounts[laborer.ID]
-	LMkt := econ.GetMarket("Labor").(*market.LaborMarket)
-	LMkt.AddEmployee(laborer.ID, walletAcc.Address)
 	return laborer
 }
 
 func (laborer *Laborer) GetWalletAccountAddress() string {
-	econ := economy.GetEconInstance()
-	walletAcc := econ.TransactionManager.WalletAccounts[laborer.ID]
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
+	walletAcc := transactionManager.WalletAccounts[laborer.ID]
 	return walletAcc.Address
 }
 
-func (laborer *Laborer) GetGood(goodName string) good.Good {
+func (laborer *Laborer) GetGood(goodName string) abstraction.Good {
 	if goodName == "Necessity" {
 		return laborer.Necessity
 	}
@@ -142,21 +145,21 @@ func (laborer *Laborer) GetConsumption(goodName string) float64 {
 }
 
 func (laborer *Laborer) Act() {
-	econ := economy.GetEconInstance()
-	walletAcc := econ.TransactionManager.WalletAccounts[laborer.ID]
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
+	walletAcc := transactionManager.WalletAccounts[laborer.ID]
 	laborer.Wage = walletAcc.PriIC
 	laborer.Income = laborer.Wage + walletAcc.SecIC // TODO: plus interest amt from saving acc
 
 	// not enough good to eat -> die
-	if (laborer.Necessity - eatAmt) < eatAmt {
+	if (laborer.Necessity.Quantity - eatAmt) < eatAmt {
 		laborer.IsAlive = false
 		fmt.Printf("Laborer %s died with balance: %f", laborer.ID, walletAcc.Balance)
-		econ.TransactionManager.CloseWalletAccount(laborer.ID)
+		transactionManager.CloseWalletAccount(laborer.ID)
 		return
 	}
 
 	depositIR := 0.08 // TODO: get deposit interest rate from bank
-	if econ.TimeStep > 0 {
+	if common.TimeStep > 0 {
 		if depositIR < laborer.LowRR {
 			laborer.LowRR = depositIR
 		}
@@ -169,7 +172,7 @@ func (laborer *Laborer) Act() {
 	}
 
 	walletBal := walletAcc.Balance
-	bankBal := 100 // TODO: hardcode the bal here, will get from real bank acc later
+	bankBal := 100.0 // TODO: hardcode the bal here, will get from real bank acc later
 
 	targetSaving := laborer.Income + baseSavingsToIncomeRatio
 	if laborer.HighRR > laborer.LowRR {
@@ -178,7 +181,7 @@ func (laborer *Laborer) Act() {
 	targetConsumption := walletBal + bankBal - targetSaving
 
 	// compute consumption
-	if econ.TimeStep == 0 {
+	if common.TimeStep == 0 {
 		laborer.Consumption = laborer.Income
 	} else {
 		laborer.Consumption = math.Min(math.Max(laborer.Consumption*(1-upsilon), targetConsumption), laborer.Consumption*(1+upsilon))
@@ -188,7 +191,7 @@ func (laborer *Laborer) Act() {
 	// TODO: deposit this amt to Bank
 
 	// compute saving rate
-	laborer.SavingRate = (bankBal + newDeposit) / (walletBal + bankBal)
+	laborer.SavingsRate = (bankBal + newDeposit) / (walletBal + bankBal)
 
 	// compute consumption of necessity
 	laborer.NConsumption = laborer.Consumption * math.Max(0, 1-laborer.Necessity.Quantity/targetNStock)
@@ -203,15 +206,12 @@ func (laborer *Laborer) Act() {
 		laborer.MinN = 0
 	}
 
-	EMkt = econ.GetMarket("Enjoyment").(*market.ConsumedGoodsMarket)
-	NMkt = econ.GetMarket("Necessity").(*market.ConsumedGoodsMarket)
-	LMkt = econ.GetMarket("Labor").(*market.LaborMarket)
 	// post buy offer to enjoyment market
-	EMkt.AddBuyOffer(laborer, laborer.DemandForE)
+	laborer.EMkt.AddBuyOffer(laborer, laborer.DemandForE)
 	// post buy offer to necessity market
-	NMkt.AddBuyOffer(laborer, laborer.DemandForN)
+	laborer.NMkt.AddBuyOffer(laborer, laborer.DemandForN)
 	// post labor market
-	LMkt.AddEmployee(laborer.ID, walletAcc.Address)
+	laborer.LMkt.AddEmployee(laborer.ID, walletAcc.Address)
 
 	walletAcc.PriIC = 0
 	walletAcc.SecIC = 0
@@ -230,4 +230,8 @@ func (de *DemandForNecessity) GetDemand(
 	consumption float64,
 ) float64 {
 	return consumption / price
+}
+
+func (laborer *Laborer) GetID() string {
+	return laborer.ID
 }

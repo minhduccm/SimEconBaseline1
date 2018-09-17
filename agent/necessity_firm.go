@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"github.com/ninjadotorg/SimEconBaseline1/abstraction"
 	"github.com/ninjadotorg/SimEconBaseline1/good"
+	"github.com/ninjadotorg/SimEconBaseline1/transaction_manager"
 )
 
 type NecessityFirm struct {
@@ -14,6 +16,9 @@ func NewNecessityFirm(
 	initWageBudget float64,
 	initCapital int,
 	capitalProducers []*CapitalFirm,
+	pMkt abstraction.ConsumedGoodsMarket,
+	lMkt abstraction.LaborMarket,
+	cMkt abstraction.CapitalMarket,
 ) *NecessityFirm {
 
 	consumedGoodsFirm := NewConsumedGoodsFirm(
@@ -23,6 +28,9 @@ func NewNecessityFirm(
 		initWageBudget,
 		initCapital,
 		capitalProducers,
+		pMkt,
+		lMkt,
+		cMkt,
 	)
 	consumedGoodsFirm.TechCoefficient = 2
 	consumedGoodsFirm.Beta = 0.5
@@ -41,9 +49,23 @@ func (necessityFirm *NecessityFirm) Act() {
 	necessityFirm.ConsumedGoodsFirm.Act()
 }
 
-func (necessityFirm *NecessityFirm) GetGood(goodName string) good.Good {
+func (necessityFirm *NecessityFirm) GetGood(goodName string) abstraction.Good {
 	if goodName == "Necessity" {
 		return necessityFirm.ConsumedGoodsFirm.Product
 	}
 	return nil
+}
+
+func (necessityFirm *NecessityFirm) GetWalletAccountAddress() string {
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
+	walletAcc := transactionManager.WalletAccounts[necessityFirm.ConsumedGoodsFirm.Firm.ID]
+	return walletAcc.Address
+}
+
+func (necessityFirm *NecessityFirm) GetConsumption(goodName string) float64 {
+	return 0.0
+}
+
+func (necessityFirm *NecessityFirm) GetID() string {
+	return necessityFirm.ConsumedGoodsFirm.GetID()
 }

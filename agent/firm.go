@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"github.com/ninjadotorg/SimEconBaseline1/economy"
 	"github.com/ninjadotorg/SimEconBaseline1/good"
+	"github.com/ninjadotorg/SimEconBaseline1/transaction_manager"
 	"github.com/ninjadotorg/SimEconBaseline1/util"
 )
 
@@ -70,8 +70,8 @@ type Firm struct {
 
 func NewFirm(initWalletBal float64) *Firm {
 	firmID := util.NewUUID()
-	econ := economy.GetEconInstance()
-	econ.TransactionManager.OpenWalletAccount(
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
+	transactionManager.OpenWalletAccount(
 		firmID,
 		initWalletBal,
 	)

@@ -3,10 +3,9 @@ package agent
 import (
 	"math"
 
+	"github.com/ninjadotorg/SimEconBaseline1/abstraction"
 	"github.com/ninjadotorg/SimEconBaseline1/common"
-	"github.com/ninjadotorg/SimEconBaseline1/economy"
-	"github.com/ninjadotorg/SimEconBaseline1/good"
-	market "github.com/ninjadotorg/SimEconBaseline1/market"
+	"github.com/ninjadotorg/SimEconBaseline1/transaction_manager"
 )
 
 type CapitalFirm struct {
@@ -25,6 +24,12 @@ type CapitalFirm struct {
 	 */
 	Price float64
 
+	// labor market
+	LMkt abstraction.LaborMarket
+
+	// capital market
+	CMkt abstraction.CapitalMarket
+
 	/**
 	 * Firm prop for general props between firm types
 	 */
@@ -34,21 +39,25 @@ type CapitalFirm struct {
 func NewCapitalFirm(
 	initWalletBal float64,
 	initWageBudget float64,
+	lMkt abstraction.LaborMarket,
+	cMkt abstraction.CapitalMarket,
 ) *CapitalFirm {
 	firm := NewFirm(initWalletBal)
 	firm.WageBudget = initWageBudget
 
-	econ := economy.GetEconInstance()
-	walletAcc := econ.TransactionManager.WalletAccounts[firm.ID]
-	LMkt := econ.GetMarket("Labor").(*market.LaborMarket)
-	LMkt.AddEmployer(firm.ID, walletAcc.Address, firm.Labor, firm.WageBudget)
-
-	return &CapitalFirm{
+	cFirm := &CapitalFirm{
 		TechCoefficient: 20000, // we assume infinite capacity here so we give TechCoefficient a very large value.
 		Firm:            firm,
 		Beta:            0.5,
 		Price:           common.INIT_CAPITAL_PRICE,
+		LMkt:            lMkt,
+		CMkt:            cMkt,
 	}
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
+	walletAcc := transactionManager.WalletAccounts[firm.ID]
+	cFirm.LMkt.AddEmployer(firm.ID, walletAcc.Address, firm.Labor, firm.WageBudget)
+
+	return cFirm
 }
 
 func (capitalFirm *CapitalFirm) Act() {
@@ -68,18 +77,17 @@ func (capitalFirm *CapitalFirm) Act() {
 	} else {
 		firm.Wage = 0
 	}
-	econ := economy.GetEconInstance()
-	walletAcc := econ.TransactionManager.WalletAccounts[firm.ID]
+
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
+	walletAcc := transactionManager.WalletAccounts[firm.ID]
+
 	revenue := walletAcc.PriIC
 	firm.Output = revenue / capitalFirm.Price
 	firm.WageBudget = revenue // - loan
 
 	// post to markets
-	LMkt := econ.GetMarket("Labor").(*market.LaborMarket)
-	LMkt.AddEmployer(firm.ID, walletAcc.Address, firm.Labor, firm.WageBudget)
-
-	CMkt := econ.GetMarket("Capital").(*market.CapitalMarket)
-	CMkt.AddCapitalSellOffer(
+	capitalFirm.LMkt.AddEmployer(firm.ID, walletAcc.Address, firm.Labor, firm.WageBudget)
+	capitalFirm.CMkt.AddCapitalSellOffer(
 		capitalFirm,
 		capitalFirm.Price,
 		int(firm.Capacity),
@@ -93,9 +101,23 @@ func (capitalFirm *CapitalFirm) ConvertToProduct(laborQty float64) float64 {
 	return capitalFirm.TechCoefficient * math.Pow(laborQty, capitalFirm.Beta)
 }
 
-func (capitalFirm *CapitalFirm) GetGood(goodName string) good.Good {
+func (capitalFirm *CapitalFirm) GetGood(goodName string) abstraction.Good {
 	if goodName == "Labor" {
 		return capitalFirm.Firm.Labor
 	}
 	return nil
+}
+
+func (capitalFirm *CapitalFirm) GetWalletAccountAddress() string {
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
+	walletAcc := transactionManager.WalletAccounts[capitalFirm.Firm.ID]
+	return walletAcc.Address
+}
+
+func (capitalFirm *CapitalFirm) GetConsumption(goodName string) float64 {
+	return 0.0
+}
+
+func (capitalFirm *CapitalFirm) GetID() string {
+	return capitalFirm.Firm.ID
 }

@@ -3,19 +3,20 @@ package market
 import (
 	"math"
 
+	"github.com/ninjadotorg/SimEconBaseline1/abstraction"
 	"github.com/ninjadotorg/SimEconBaseline1/common"
-	"github.com/ninjadotorg/SimEconBaseline1/economy"
-	"github.com/ninjadotorg/SimEconBaseline1/good"
+	"github.com/ninjadotorg/SimEconBaseline1/transaction_manager"
 )
 
 type Employee struct {
+	AgentID       string
 	WalletAddress string
 }
 
 type Employer struct {
-	Labor         *good.Labor
+	Labor         abstraction.Good
 	WageBudget    float64 // total wage budget
-	Name          string  // name of the employer
+	AgentID       string
 	WalletAddress string
 }
 
@@ -44,7 +45,7 @@ func (laborMarket *LaborMarket) AddEmployee(agentID, walletAddress string) {
 func (laborMarket *LaborMarket) AddEmployer(
 	agentID string,
 	walletAddress string,
-	labor *good.Labor,
+	labor abstraction.Good,
 	wageBudget float64,
 ) {
 	employer := &Employer{
@@ -60,15 +61,15 @@ func (laborMarket *LaborMarket) AddEmployer(
 func (laborMarket *LaborMarket) Perform() {
 	// TODO: should shuffle employers & employees
 
-	econ := economy.GetEconInstance()
+	transactionManager := transaction_manager.GetTransactionManagerInstance()
 	var low int = 0
 	var sum float64 = 0
 	for _, employer := range laborMarket.Employers {
 		sum += employer.WageBudget
-		high := int(math.Min(1, sum/laborMarket.TotalBudget) * len(laborMarket.Employees))
-		wage := employer.WageBudget / (high - low)
+		high := int(math.Min(1, sum/laborMarket.TotalBudget) * float64(len(laborMarket.Employees)))
+		wage := employer.WageBudget / float64(high-low)
 		for i := low; i < high; i++ {
-			econ.TransactionManager.Pay(
+			transactionManager.Pay(
 				employer.AgentID,
 				laborMarket.Employees[i].AgentID,
 				wage,
