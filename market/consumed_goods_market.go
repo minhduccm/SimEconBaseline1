@@ -120,7 +120,8 @@ func (consumedGoodsMarket *ConsumedGoodsMarket) Perform() {
 			qty := offer.Demd.GetDemand(price, consumption) / totalDemand * vol
 			payAmt := qty * price
 			transactionManager.PayFrom(
-				offer.Buyer.GetWalletAccountAddress(),
+				// offer.Buyer.GetWalletAccountAddress(),
+				offer.Buyer.GetID(),
 				payAmt,
 			)
 			good := offer.Buyer.GetGood(consumedGoodsMarket.GoodName)
@@ -130,7 +131,8 @@ func (consumedGoodsMarket *ConsumedGoodsMarket) Perform() {
 			qty := offer.Qty / totalSuppy * vol
 			payAmt := qty * price
 			transactionManager.PayTo(
-				offer.Seller.GetWalletAccountAddress(),
+				// offer.Seller.GetWalletAccountAddress(),
+				offer.Seller.GetID(),
 				payAmt,
 				common.PRIIC,
 			)
