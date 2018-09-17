@@ -202,7 +202,7 @@ func (cgf *ConsumedGoodsFirm) PrintLastState() {
 	fmt.Printf("Consumed goods firm ID: %s \n", cgf.Firm.ID)
 	fmt.Printf("**** Consumed goods firm type: %s \n", cgf.ProductName)
 
-	fmt.Printf("**** Number of labors: %f \n", cgf.Firm.Labor.GetQuantity())
+	fmt.Printf("**** Number of laborers: %f \n", cgf.Firm.Labor.GetQuantity())
 	fmt.Printf("**** Capacity (max output the firm could produce with the current capital and labor): %f \n", cgf.Firm.Capacity)
 	fmt.Printf("**** Output: %f \n", cgf.Firm.Output)
 	fmt.Printf("**** Wage budget: %f \n", cgf.Firm.WageBudget)

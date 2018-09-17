@@ -63,7 +63,7 @@ func NewCapitalFirm(
 
 func (capitalFirm *CapitalFirm) PrintLastState() {
 	fmt.Printf("Capital firm ID: %s \n", capitalFirm.Firm.ID)
-	fmt.Printf("**** Number of labors: %f \n", capitalFirm.Firm.Labor.GetQuantity())
+	fmt.Printf("**** Number of laborers: %f \n", capitalFirm.Firm.Labor.GetQuantity())
 	fmt.Printf("**** Capacity (max output the firm could produce with the current capital and labor): %f \n", capitalFirm.Firm.Capacity)
 	fmt.Printf("**** Output: %f \n", capitalFirm.Firm.Output)
 	fmt.Printf("**** Wage budget: %f \n", capitalFirm.Firm.WageBudget)

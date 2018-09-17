@@ -10,9 +10,6 @@ import (
 )
 
 const (
-	// number of steps between two printer outputs
-	STEP_SIZE = 50
-
 	// number of steps to run
 	NUM_STEP = 100
 
@@ -25,25 +22,25 @@ const (
 	MIN_INIT_N_PRICE = 0.1
 	MAX_INIT_N_PRICE = 5
 
-	EFIRM_INIT_CHECKING   = 100
-	EFIRM_INIT_SAVINGS    = -1000
+	EFIRM_INIT_CHECKING = 100
+	// EFIRM_INIT_SAVINGS    = -1000
 	EFIRM_INIT_OUTPUT     = 40
 	EFIRM_INIT_WAGEBUDGET = 100
 	EFIRM_INIT_CAPITAL    = 30
 
-	NFIRM_INIT_CHECKING   = 100
-	NFIRM_INIT_SAVINGS    = -1000
+	NFIRM_INIT_CHECKING = 100
+	// NFIRM_INIT_SAVINGS    = -1000
 	NFIRM_INIT_OUTPUT     = 50
 	NFIRM_INIT_WAGEBUDGET = 100
 	NFIRM_INIT_CAPITAL    = 30
 
 	CFIRM_INIT_WAGEBUDGET = 500
 	CFIRM_INIT_CHECKING   = CFIRM_INIT_WAGEBUDGET
-	CFIRM_INIT_SAVINGS    = 0
+	// CFIRM_INIT_SAVINGS    = 0
 
-	LABORER_INIT_E            = 0
-	LABORER_INIT_CHECKING     = 0
-	LABORER_INIT_SAVINGS      = 100
+	LABORER_INIT_E        = 0
+	LABORER_INIT_CHECKING = 0
+	// LABORER_INIT_SAVINGS      = 100
 	LABORER_INIT_SAVINGS_RATE = 0.9
 )
 
@@ -120,8 +117,6 @@ func main() {
 	for _, nFirm := range nFirms {
 		econ.Agents = append(econ.Agents, nFirm)
 	}
-	// econ.Agents = append(econ.Agents, eFirms...)
-	// econ.Agents = append(econ.Agents, nFirms...)
 
 	// Create and add laborers
 	for i := 0; i < NUM_LABORERS; i++ {
