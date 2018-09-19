@@ -186,9 +186,9 @@ func (laborer *Laborer) Act() {
 	walletBal := walletAcc.Balance
 	bankBal := 100.0 // TODO: hardcode the bal here, will get from real bank acc later
 
-	targetSaving := laborer.Income + baseSavingsToIncomeRatio
+	targetSaving := laborer.Income * baseSavingsToIncomeRatio
 	if laborer.HighRR > laborer.LowRR {
-		targetSaving *= (depositIR-laborer.LowRR)/(laborer.LowRR-laborer.LowRR)*epsilon*2 + 1 - epsilon
+		targetSaving *= (depositIR-laborer.LowRR)/(laborer.HighRR-laborer.LowRR)*epsilon*2 + 1 - epsilon
 	}
 	targetConsumption := walletBal + bankBal - targetSaving
 
